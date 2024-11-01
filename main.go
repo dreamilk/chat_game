@@ -1,7 +1,13 @@
 package main
 
-import "fmt"
+import (
+	"chat_game/api"
+
+	"github.com/gin-gonic/gin"
+)
 
 func main() {
-	fmt.Println("hello world")
+	r := gin.Default()
+	api.RegisterRoute(r)
+	r.Run(":8001")
 }
