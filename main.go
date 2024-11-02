@@ -2,6 +2,7 @@ package main
 
 import (
 	"chat_game/api"
+	"chat_game/config"
 
 	"github.com/gin-gonic/gin"
 )
@@ -9,5 +10,5 @@ import (
 func main() {
 	r := gin.Default()
 	api.RegisterRoute(r)
-	r.Run(":8001")
+	r.Run(config.GetAppConfig().Port)
 }

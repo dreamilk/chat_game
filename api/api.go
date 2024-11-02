@@ -7,6 +7,6 @@ import (
 )
 
 func RegisterRoute(eg *gin.Engine) {
-	g := eg.Group("/room")
-	g.GET("/list", room.List)
+	roomGroup := eg.Group("/room")
+	roomGroup.GET("/list", room.List)
 }
