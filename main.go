@@ -1,10 +1,10 @@
 package main
 
 import (
+	"github.com/gin-gonic/gin"
+
 	"chat_game/api"
 	"chat_game/config"
-
-	"github.com/gin-gonic/gin"
 )
 
 func main() {

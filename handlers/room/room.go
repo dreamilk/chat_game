@@ -1,10 +1,11 @@
 package room
 
 import (
-	"chat_game/handlers"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	"chat_game/handlers"
 )
 
 type Room struct {
@@ -17,7 +18,7 @@ func List(ctx *gin.Context) {
 		ID: "abc1",
 	})
 
-	ctx.JSON(http.StatusOK, handlers.Return{
+	ctx.JSON(http.StatusOK, handlers.Resp{
 		Code: 0,
 		Data: rooms,
 	})
