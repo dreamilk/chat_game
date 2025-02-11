@@ -1,8 +1,8 @@
 package ws
 
 import (
+	"context"
 	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -20,8 +20,13 @@ func ServeWs(c *gin.Context) {
 		return
 	}
 
-	for {
-		conn.WriteMessage(1, []byte("hello"))
-		time.Sleep(time.Second)
-	}
+	ctx := context.Background()
+
+	userID := c.Query("user_id")
+	client := NewClient(hub, userID, conn)
+
+	// 先启动客户端
+	client.Start(ctx)
+	// 然后再注册，这样可以确保 channel 已经准备好接收消息
+	hub.Register(ctx, userID, client)
 }

@@ -19,7 +19,8 @@ func List(ctx *gin.Context) {
 	})
 
 	ctx.JSON(http.StatusOK, handlers.Resp{
-		Code: 0,
-		Data: rooms,
+		Code:    0,
+		Data:    rooms,
+		Message: "ok",
 	})
 }
