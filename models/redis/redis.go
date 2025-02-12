@@ -14,12 +14,17 @@ type Client interface {
 	Get(ctx context.Context, key string) (string, error)
 	Set(ctx context.Context, key string, value string) error
 	Del(ctx context.Context, key string) error
+
 	HSet(ctx context.Context, key string, field string, value string) error
 	HGet(ctx context.Context, key string, field string) (string, error)
 	HGetAll(ctx context.Context, key string) (map[string]string, error)
+	HDel(ctx context.Context, key string, field string) error
+	HExists(ctx context.Context, key string, field string) (bool, error)
+
 	SAdd(ctx context.Context, key string, value string) error
 	SMembers(ctx context.Context, key string) ([]string, error)
 	SRem(ctx context.Context, key string, value string) error
+	SIsMember(ctx context.Context, key string, value string) (bool, error)
 }
 
 var _ Client = &RedisClient{}
@@ -58,6 +63,14 @@ func (r *RedisClient) HGetAll(ctx context.Context, key string) (map[string]strin
 	return r.c.HGetAll(ctx, key).Result()
 }
 
+func (r *RedisClient) HDel(ctx context.Context, key string, field string) error {
+	return r.c.HDel(ctx, key, field).Err()
+}
+
+func (r *RedisClient) HExists(ctx context.Context, key string, field string) (bool, error) {
+	return r.c.HExists(ctx, key, field).Result()
+}
+
 func (r *RedisClient) SAdd(ctx context.Context, key string, value string) error {
 	return r.c.SAdd(ctx, key, value).Err()
 }
@@ -68,4 +81,8 @@ func (r *RedisClient) SMembers(ctx context.Context, key string) ([]string, error
 
 func (r *RedisClient) SRem(ctx context.Context, key string, value string) error {
 	return r.c.SRem(ctx, key, value).Err()
+}
+
+func (r *RedisClient) SIsMember(ctx context.Context, key string, value string) (bool, error) {
+	return r.c.SIsMember(ctx, key, value).Result()
 }

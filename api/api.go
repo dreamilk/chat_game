@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"chat_game/api/ws"
+	"chat_game/auth"
 	"chat_game/handlers"
 	"chat_game/handlers/room"
 )
@@ -15,8 +16,8 @@ func RegisterRoute(eg *gin.Engine) {
 	roomGroup := eg.Group("/room")
 	roomGroup.GET("/list", room.List)
 	roomGroup.GET("/detail", room.Detail)
-	roomGroup.POST("/create", room.Create)
-	roomGroup.POST("/join", room.Join)
-	roomGroup.POST("/leave", room.Leave)
-	roomGroup.POST("/delete", room.Delete)
+	roomGroup.POST("/create", auth.Auth(), room.Create)
+	roomGroup.POST("/join", auth.Auth(), room.Join)
+	roomGroup.POST("/leave", auth.Auth(), room.Leave)
+	roomGroup.POST("/delete", auth.Auth(), room.Delete)
 }
