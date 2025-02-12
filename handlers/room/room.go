@@ -134,7 +134,7 @@ func Delete(ctx *gin.Context) {
 		RoomID string `json:"room_id" form:"room_id" binding:"required"`
 	}
 
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+	if err := ctx.ShouldBindBodyWithJSON(&req); err != nil {
 		ctx.JSON(http.StatusOK, handlers.Resp{
 			Code:    -1,
 			Message: err.Error(),

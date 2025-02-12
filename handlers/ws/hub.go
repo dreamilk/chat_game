@@ -5,6 +5,7 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
 
 	"chat_game/log"
@@ -22,19 +23,21 @@ type HubMessage struct {
 	msg         []byte
 }
 
+var hub *Hub
+
 func NewHub() *Hub {
-	return &Hub{
+	if hub != nil {
+		return hub
+	}
+
+	hub = &Hub{
 		m:       make(map[string]*Client),
 		receive: make(chan HubMessage, 1024),
 	}
-}
+	go hub.Run(context.Background())
 
-func init() {
-	ctx := context.Background()
-	go hub.Run(ctx)
+	return hub
 }
-
-var hub = NewHub()
 
 func (h *Hub) Register(ctx context.Context, userID string, client *Client) {
 	h.mu.Lock()
@@ -71,5 +74,11 @@ func (h *Hub) Run(ctx context.Context) {
 	for {
 		msg := <-h.receive
 		log.Info(ctx, "handle", zap.String("user_id", msg.userID), zap.String("msg", string(msg.msg)), zap.Int("message_type", msg.messageType))
+
+		if msg.messageType == websocket.TextMessage {
+			nCtx := context.Background()
+
+			HandleWs(nCtx, h, msg.userID, msg.msg)
+		}
 	}
 }

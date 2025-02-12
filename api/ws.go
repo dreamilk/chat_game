@@ -1,4 +1,4 @@
-package ws
+package api
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+
+	"chat_game/handlers/ws"
 )
 
 var upgrader = websocket.Upgrader{
@@ -21,9 +23,10 @@ func ServeWs(c *gin.Context) {
 	}
 
 	ctx := context.Background()
+	hub := ws.NewHub()
 
 	userID := c.Query("user_id")
-	client := NewClient(hub, userID, conn)
+	client := ws.NewClient(hub, userID, conn)
 
 	client.Start(ctx)
 	hub.Register(ctx, userID, client)
