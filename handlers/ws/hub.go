@@ -9,12 +9,16 @@ import (
 	"go.uber.org/zap"
 
 	"chat_game/log"
+	"chat_game/services/message"
+	"chat_game/services/room"
 )
 
 type Hub struct {
-	m       map[string]*Client
-	mu      sync.Mutex
-	receive chan HubMessage
+	m              map[string]*Client
+	mu             sync.Mutex
+	receive        chan HubMessage
+	roomService    room.RoomService
+	messageService message.MessageService
 }
 
 type HubMessage struct {
@@ -31,8 +35,10 @@ func NewHub() *Hub {
 	}
 
 	hub = &Hub{
-		m:       make(map[string]*Client),
-		receive: make(chan HubMessage, 1024),
+		m:              make(map[string]*Client),
+		receive:        make(chan HubMessage, 1024),
+		roomService:    room.NewRoomService(),
+		messageService: message.NewMessageService(),
 	}
 	go hub.Run(context.Background())
 

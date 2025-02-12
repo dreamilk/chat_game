@@ -5,20 +5,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"chat_game/config"
 	"chat_game/handlers"
-	"chat_game/models/redis"
 	"chat_game/services/room"
 )
 
 var roomService room.RoomService
 
 func init() {
-	appConfig := config.GetAppConfig()
-
-	redisClient := redis.NewRedis(appConfig.Redis.Addr, appConfig.Redis.User, appConfig.Redis.Password)
-
-	roomService = room.NewRoomService(redisClient)
+	roomService = room.NewRoomService()
 }
 
 func List(ctx *gin.Context) {

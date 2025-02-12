@@ -1,17 +1,13 @@
 port: :8081
 
 redis:
-  host: localhost
+  host: redis.zest-all.orb.local
   port: 6379
   password: ""
   db: 0
 
 mysql:
-  host: 127.0.0.1
-  port: 3306
-  user: ""
-  password: ""
-  db: chat_game
+  dsn: "root:zest0108@tcp(db.zest-all.orb.local:3306)/chat_game?charset=utf8mb4&parseTime=True&loc=Local"
 
 kafka:
   host: localhost

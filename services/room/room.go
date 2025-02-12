@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 
+	"chat_game/config"
 	"chat_game/models/redis"
 )
 
@@ -40,7 +41,10 @@ type roomServiceImpl struct {
 
 var _ RoomService = &roomServiceImpl{}
 
-func NewRoomService(redisClient redis.Client) RoomService {
+func NewRoomService() RoomService {
+	appConfig := config.GetAppConfig()
+	redisClient := redis.NewRedis(appConfig.Redis.Addr, appConfig.Redis.User, appConfig.Redis.Password)
+
 	return &roomServiceImpl{
 		redisClient: redisClient,
 	}

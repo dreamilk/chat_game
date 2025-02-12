@@ -13,6 +13,14 @@ type AppConfig struct {
 		User     string `yaml:"user"`
 		Password string `yaml:"password"`
 	} `yaml:"redis"`
+
+	Mysql struct {
+		Dsn string `yaml:"dsn"`
+	} `yaml:"mysql"`
+
+	Postgres struct {
+		Dsn string `yaml:"dsn"`
+	} `yaml:"postgres"`
 }
 
 const (
