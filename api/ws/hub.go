@@ -11,14 +11,27 @@ import (
 )
 
 type Hub struct {
-	m  map[string]*Client
-	mu sync.Mutex
+	m       map[string]*Client
+	mu      sync.Mutex
+	receive chan HubMessage
+}
+
+type HubMessage struct {
+	userID      string
+	messageType int
+	msg         []byte
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		m: make(map[string]*Client),
+		m:       make(map[string]*Client),
+		receive: make(chan HubMessage, 1024),
 	}
+}
+
+func init() {
+	ctx := context.Background()
+	go hub.Run(ctx)
 }
 
 var hub = NewHub()
@@ -31,10 +44,7 @@ func (h *Hub) Register(ctx context.Context, userID string, client *Client) {
 
 	log.Info(ctx, "register", zap.String("user_id", userID))
 
-	// 确保在 client.Start() 之后再发送 welcome 消息
-	go func() {
-		client.send <- []byte("welcome")
-	}()
+	client.send <- []byte("welcome")
 }
 
 func (h *Hub) Unregister(userID string) {
@@ -55,4 +65,11 @@ func (h *Hub) Send(userID string, msg []byte) error {
 
 	client.send <- msg
 	return nil
+}
+
+func (h *Hub) Run(ctx context.Context) {
+	for {
+		msg := <-h.receive
+		log.Info(ctx, "handle", zap.String("user_id", msg.userID), zap.String("msg", string(msg.msg)), zap.Int("message_type", msg.messageType))
+	}
 }

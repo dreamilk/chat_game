@@ -10,11 +10,11 @@ import (
 var defaultLogger *zap.Logger
 
 func init() {
-	var err error
-	defaultLogger, _ = zap.NewDevelopment(zap.AddCaller(), zap.AddCallerSkip(1))
+	logger, err := zap.NewDevelopment(zap.AddCaller(), zap.AddCallerSkip(1))
 	if err != nil {
 		panic(err)
 	}
+	defaultLogger = logger
 }
 
 func Info(ctx context.Context, msg string, fields ...zap.Field) {

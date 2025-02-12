@@ -25,8 +25,6 @@ func ServeWs(c *gin.Context) {
 	userID := c.Query("user_id")
 	client := NewClient(hub, userID, conn)
 
-	// 先启动客户端
 	client.Start(ctx)
-	// 然后再注册，这样可以确保 channel 已经准备好接收消息
 	hub.Register(ctx, userID, client)
 }

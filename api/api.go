@@ -14,4 +14,9 @@ func RegisterRoute(eg *gin.Engine) {
 
 	roomGroup := eg.Group("/room")
 	roomGroup.GET("/list", room.List)
+	roomGroup.GET("/detail", room.Detail)
+	roomGroup.POST("/create", room.Create)
+	roomGroup.POST("/join", room.Join)
+	roomGroup.POST("/leave", room.Leave)
+	roomGroup.POST("/delete", room.Delete)
 }

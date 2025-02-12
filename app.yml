@@ -7,9 +7,9 @@ redis:
   db: 0
 
 mysql:
-  host: localhost
+  host: 127.0.0.1
   port: 3306
-  user: root
+  user: ""
   password: ""
   db: chat_game
 

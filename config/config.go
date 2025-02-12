@@ -7,7 +7,12 @@ import (
 )
 
 type AppConfig struct {
-	Port string `yaml:"port"`
+	Port  string `yaml:"port"`
+	Redis struct {
+		Addr     string `yaml:"addr"`
+		User     string `yaml:"user"`
+		Password string `yaml:"password"`
+	} `yaml:"redis"`
 }
 
 const (
