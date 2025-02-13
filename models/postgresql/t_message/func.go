@@ -25,7 +25,11 @@ func NewMessageDB(db *gorm.DB) MessageDB {
 
 func (m *MessageDBImpl) List(ctx context.Context, sender string, receiver string) ([]Message, error) {
 	var list []Message
-	err := m.db.WithContext(ctx).Where(ColumnSender+" = ? AND "+ColumnReceiver+" = ?", sender, receiver).Find(&list).Order(ColumnCreatedAt + " DESC").Error
+	err := m.db.WithContext(ctx).
+		Where(ColumnSender+" = ? AND "+ColumnReceiver+" = ?", sender, receiver).
+		Or(ColumnSender+" = ? AND "+ColumnReceiver+" = ?", receiver, sender).
+		Order(ColumnCreatedAt + " DESC").
+		Find(&list).Error
 	return list, err
 }
 

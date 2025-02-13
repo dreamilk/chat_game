@@ -8,6 +8,7 @@ import (
 
 type GroupMessageDB interface {
 	Insert(ctx context.Context, message GroupMessage) error
+	List(ctx context.Context, roomID string) ([]GroupMessage, error)
 }
 
 type GroupMessageDBImpl struct {
@@ -24,4 +25,9 @@ func NewGroupMessageDB(db *gorm.DB) GroupMessageDB {
 
 func (m *GroupMessageDBImpl) Insert(ctx context.Context, message GroupMessage) error {
 	return m.db.WithContext(ctx).Create(&message).Error
+}
+
+func (m *GroupMessageDBImpl) List(ctx context.Context, roomID string) ([]GroupMessage, error) {
+	var messages []GroupMessage
+	return messages, m.db.WithContext(ctx).Where("room_id = ?", roomID).Order("created_at DESC").Find(&messages).Error
 }

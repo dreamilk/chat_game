@@ -3,12 +3,11 @@ package ws
 import (
 	"context"
 	"encoding/json"
-	"time"
 
 	"go.uber.org/zap"
 
 	"chat_game/log"
-	tmessage "chat_game/models/postgresql/t_message"
+	"chat_game/utils/opctx"
 )
 
 type MessageType string
@@ -25,6 +24,8 @@ type Message struct {
 }
 
 func HandleWs(ctx context.Context, h *Hub, userID string, msg []byte) {
+	ctx = opctx.SetUserID(ctx, userID)
+
 	var message Message
 	if err := json.Unmarshal(msg, &message); err != nil {
 		log.Error(ctx, "unmarshal message", zap.Error(err), zap.String("msg", string(msg)), zap.String("user_id", userID))
@@ -33,30 +34,13 @@ func HandleWs(ctx context.Context, h *Hub, userID string, msg []byte) {
 
 	switch message.MsgType {
 	case MsgTypeRoomMsg:
-		room, err := h.roomService.Detail(ctx, message.Dst)
-		if err != nil {
-			log.Error(ctx, "get room detail", zap.Error(err), zap.String("room_id", message.Dst))
-			return
-		}
-
-		for _, user := range room.Users {
-			if err := h.Send(user, []byte(message.Msg)); err != nil {
-				log.Error(ctx, "send message to user", zap.Error(err), zap.String("user_id", user), zap.String("msg", message.Msg))
-			}
+		if err := h.messageService.SendToRoom(ctx, message.Dst, []byte(message.Msg), h.Send); err != nil {
+			log.Error(ctx, "send message to room", zap.Error(err), zap.String("room_id", message.Dst), zap.String("msg", message.Msg))
 		}
 
 	case MsgTypeUserMsg:
-		if err := h.Send(message.Dst, []byte(message.Msg)); err != nil {
-			log.Error(ctx, "send message to user", zap.Error(err), zap.String("user_id", message.Dst), zap.String("msg", message.Msg))
-		}
-
-		if err := h.messageService.Insert(ctx, tmessage.Message{
-			Sender:    userID,
-			Receiver:  message.Dst,
-			Content:   message.Msg,
-			CreatedAt: time.Now(),
-		}); err != nil {
-			log.Error(ctx, "insert message", zap.Error(err))
+		if err := h.messageService.SendToUser(ctx, message.Dst, []byte(message.Msg), h.Send); err != nil {
+			log.Error(ctx, "send message to user", zap.Error(err), zap.String("user_id", userID), zap.String("msg", message.Msg))
 		}
 
 	default:

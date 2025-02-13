@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"go.uber.org/zap"
@@ -82,9 +83,28 @@ func (h *Hub) Run(ctx context.Context) {
 		log.Info(ctx, "handle", zap.String("user_id", msg.userID), zap.String("msg", string(msg.msg)), zap.Int("message_type", msg.messageType))
 
 		if msg.messageType == websocket.TextMessage {
-			nCtx := context.Background()
+			nCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
-			HandleWs(nCtx, h, msg.userID, msg.msg)
+			go func() {
+				defer cancel()
+
+				done := make(chan struct{})
+				go func() {
+					HandleWs(nCtx, h, msg.userID, msg.msg)
+					close(done)
+				}()
+
+				select {
+				case <-done:
+				case <-nCtx.Done():
+					log.Error(ctx, "handle timeout",
+						zap.String("user_id", msg.userID),
+						zap.Error(nCtx.Err()))
+
+					// for retry
+					h.receive <- msg
+				}
+			}()
 		}
 	}
 }

@@ -1,12 +1,14 @@
 package tgroupmessage
 
+import "time"
+
 type GroupMessage struct {
-	ID        int    `json:"id"`
-	RoomID    int    `json:"room_id"`
-	Sender    string `json:"sender"`
-	Content   string `json:"content"`
-	CreatedAt string `json:"created_at"`
-	UpdatedAt string `json:"updated_at"`
+	ID        string    `json:"id" gorm:"default:uuid_generate_v4()"`
+	RoomID    string    `json:"room_id"`
+	Sender    string    `json:"sender"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 func (GroupMessage) TableName() string {

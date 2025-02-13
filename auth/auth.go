@@ -4,6 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	"chat_game/handlers"
+	"chat_game/utils/common"
 )
 
 const (
@@ -19,7 +22,10 @@ func Auth() gin.HandlerFunc {
 		} else {
 			t, err := c.Cookie(authToken)
 			if err != nil {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+				c.JSON(http.StatusOK, handlers.Resp{
+					Code:    -100,
+					Message: "Unauthorized",
+				})
 				c.Abort()
 				return
 			}
@@ -27,12 +33,15 @@ func Auth() gin.HandlerFunc {
 		}
 
 		if token == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			c.JSON(http.StatusOK, handlers.Resp{
+				Code:    -100,
+				Message: "Unauthorized",
+			})
 			c.Abort()
 			return
 		}
 
-		c.Set("user_id", token)
+		c.Set(common.UserIDKey, token)
 
 		c.Next()
 	}
