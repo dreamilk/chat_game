@@ -25,7 +25,7 @@ func ServeWs(c *gin.Context) {
 	ctx := context.Background()
 	hub := ws.NewHub()
 
-	userID := c.Query("user_id")
+	userID := c.GetString("user_id")
 	client := ws.NewClient(hub, userID, conn)
 
 	client.Start(ctx)

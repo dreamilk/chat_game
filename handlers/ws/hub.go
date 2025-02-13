@@ -53,7 +53,7 @@ func (h *Hub) Register(ctx context.Context, userID string, client *Client) {
 
 	log.Info(ctx, "register", zap.String("user_id", userID))
 
-	client.send <- []byte("welcome")
+	client.send <- []byte("welcome " + userID)
 }
 
 func (h *Hub) Unregister(userID string) {

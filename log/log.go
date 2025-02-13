@@ -1,6 +1,7 @@
 package log
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/gin-gonic/gin"
@@ -38,6 +39,10 @@ func GinZap() gin.HandlerFunc {
 		path := c.Request.URL.Path
 		raw := c.Request.URL.RawQuery
 
+		// 使用 ResponseWriter 的替代方案来捕获响应
+		blw := &bodyLogWriter{body: bytes.NewBufferString(""), ResponseWriter: c.Writer}
+		c.Writer = blw
+
 		c.Next()
 
 		if raw != "" {
@@ -51,7 +56,20 @@ func GinZap() gin.HandlerFunc {
 			zap.String("path", path),
 			zap.Int("status", c.Writer.Status()),
 			zap.String("user_agent", c.Request.UserAgent()),
-			zap.String("error", c.Errors.ByType(gin.ErrorTypePrivate).String()),
 		)
+
+		// 记录响应内容
+		defaultLogger.Info("HTTP response", zap.String("body", blw.body.String()))
 	}
+}
+
+// 添加一个自定义的 ResponseWriter
+type bodyLogWriter struct {
+	gin.ResponseWriter
+	body *bytes.Buffer
+}
+
+func (w bodyLogWriter) Write(b []byte) (int, error) {
+	w.body.Write(b)
+	return w.ResponseWriter.Write(b)
 }

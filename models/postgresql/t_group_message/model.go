@@ -8,3 +8,7 @@ type GroupMessage struct {
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
 }
+
+func (GroupMessage) TableName() string {
+	return "t_group_message"
+}

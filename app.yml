@@ -9,7 +9,11 @@ redis:
 mysql:
   dsn: "root:zest0108@tcp(db.zest-all.orb.local:3306)/chat_game?charset=utf8mb4&parseTime=True&loc=Local"
 
+postgres:
+  dsn: "postgres://postgres:admin@postgres.orb.local:5432/chat_game"
+
 kafka:
   host: localhost
   port: 9092
   topic: chat_game
+

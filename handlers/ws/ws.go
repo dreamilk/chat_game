@@ -8,7 +8,7 @@ import (
 	"go.uber.org/zap"
 
 	"chat_game/log"
-	tmessage "chat_game/models/mysql/t_message"
+	tmessage "chat_game/models/postgresql/t_message"
 )
 
 type MessageType string
@@ -19,7 +19,6 @@ const (
 )
 
 type Message struct {
-	User    string      `json:"user"`
 	Dst     string      `json:"dst"`
 	MsgType MessageType `json:"msg_type"`
 	Msg     string      `json:"msg"`

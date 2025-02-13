@@ -10,8 +10,9 @@ import (
 )
 
 func RegisterRoute(eg *gin.Engine) {
-	eg.GET("/ws", ServeWs)
 	eg.GET("/ping", handlers.Ping)
+
+	eg.GET("/ws", auth.Auth(), ServeWs)
 
 	roomGroup := eg.Group("/room")
 	roomGroup.GET("/list", room.List)
