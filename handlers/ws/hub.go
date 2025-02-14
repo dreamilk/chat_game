@@ -2,7 +2,7 @@ package ws
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"sync"
 	"time"
 
@@ -10,8 +10,12 @@ import (
 	"go.uber.org/zap"
 
 	"chat_game/log"
+	"chat_game/rpc"
+	client "chat_game/rpc/client"
 	"chat_game/services/message"
 	"chat_game/services/room"
+	"chat_game/services/wshub"
+	"chat_game/utils/common"
 )
 
 type Hub struct {
@@ -20,6 +24,8 @@ type Hub struct {
 	receive        chan HubMessage
 	roomService    room.RoomService
 	messageService message.MessageService
+	rpcAddr        string
+	msgHub         *wshub.Hub
 }
 
 type HubMessage struct {
@@ -40,6 +46,7 @@ func NewHub() *Hub {
 		receive:        make(chan HubMessage, 1024),
 		roomService:    room.NewRoomService(),
 		messageService: message.NewMessageService(),
+		msgHub:         wshub.NewHub(),
 	}
 	go hub.Run(context.Background())
 
@@ -55,6 +62,8 @@ func (h *Hub) Register(ctx context.Context, userID string, client *Client) {
 	log.Info(ctx, "register", zap.String("user_id", userID))
 
 	client.send <- []byte("welcome " + userID)
+
+	h.msgHub.Register(ctx, userID, h.rpcAddr)
 }
 
 func (h *Hub) Unregister(userID string) {
@@ -62,18 +71,47 @@ func (h *Hub) Unregister(userID string) {
 	defer h.mu.Unlock()
 
 	delete(h.m, userID)
+
+	h.msgHub.Unregister(context.Background(), userID)
 }
 
 func (h *Hub) Send(userID string, msg []byte) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	client, ok := h.m[userID]
-	if !ok {
-		return errors.New("client not found")
+	c, ok := h.m[userID]
+	if ok {
+		c.send <- msg
+		return nil
 	}
 
-	client.send <- msg
+	msgReq := common.Msg{}
+
+	err := json.Unmarshal(msg, &msgReq)
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+
+	log.Info(ctx, "send message", zap.String("msg", string(msg)))
+
+	rpcAddr, err := h.msgHub.Find(ctx, msgReq.Receiver)
+	if err != nil {
+		log.Error(ctx, "find msg rpc addr", zap.Error(err), zap.String("user_id", msgReq.Receiver))
+		return err
+	}
+
+	msgRpcService, err := client.NewMsgServiceClient("tcp", rpcAddr)
+	if err != nil {
+		return err
+	}
+
+	_, err = msgRpcService.SendMessage(context.Background(), msgReq)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -90,7 +128,10 @@ func (h *Hub) Run(ctx context.Context) {
 
 				done := make(chan struct{})
 				go func() {
-					HandleWs(nCtx, h, msg.userID, msg.msg)
+					err := h.HandleWs(nCtx, msg.userID, msg.msg)
+					if err != nil {
+						log.Error(ctx, "handle ws", zap.String("user_id", msg.userID), zap.Error(err))
+					}
 					close(done)
 				}()
 
@@ -107,4 +148,22 @@ func (h *Hub) Run(ctx context.Context) {
 			}()
 		}
 	}
+}
+
+var _ rpc.MsgServer = (*Hub)(nil)
+
+// SendMessage implements rpc.MsgServer.
+func (h *Hub) SendMessage(req common.Msg, res *rpc.MsgResp) error {
+	ctx := context.Background()
+
+	msg, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+
+	return h.HandleWs(ctx, req.Sender, msg)
+}
+
+func (h *Hub) SetRpcAddr(addr string) {
+	h.rpcAddr = addr
 }

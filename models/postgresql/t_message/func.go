@@ -7,7 +7,7 @@ import (
 )
 
 type MessageDB interface {
-	List(ctx context.Context, sender string, receiver string) ([]Message, error)
+	List(ctx context.Context, userID string, friendID string) ([]Message, error)
 	Insert(ctx context.Context, message Message) error
 }
 
@@ -23,11 +23,11 @@ func NewMessageDB(db *gorm.DB) MessageDB {
 	return &MessageDBImpl{db: db}
 }
 
-func (m *MessageDBImpl) List(ctx context.Context, sender string, receiver string) ([]Message, error) {
+func (m *MessageDBImpl) List(ctx context.Context, userID string, friendID string) ([]Message, error) {
 	var list []Message
 	err := m.db.WithContext(ctx).
-		Where(ColumnSender+" = ? AND "+ColumnReceiver+" = ?", sender, receiver).
-		Or(ColumnSender+" = ? AND "+ColumnReceiver+" = ?", receiver, sender).
+		Where(ColumnSender+" = ? AND "+ColumnReceiver+" = ?", userID, friendID).
+		Or(ColumnSender+" = ? AND "+ColumnReceiver+" = ?", friendID, userID).
 		Order(ColumnCreatedAt + " DESC").
 		Find(&list).Error
 	return list, err

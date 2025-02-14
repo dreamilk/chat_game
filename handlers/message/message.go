@@ -6,6 +6,8 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"chat_game/handlers"
+	tgroupmessage "chat_game/models/postgresql/t_group_message"
+	tmessage "chat_game/models/postgresql/t_message"
 	"chat_game/services/message"
 )
 
@@ -19,7 +21,7 @@ func List(ctx *gin.Context) {
 	userID := ctx.GetString("user_id")
 
 	var req struct {
-		Receiver string `json:"receiver" form:"receiver" binding:"required,min=1"`
+		FriendID string `json:"friend_id" form:"friend_id" binding:"required,min=1"`
 	}
 
 	if err := ctx.ShouldBindQuery(&req); err != nil {
@@ -30,7 +32,7 @@ func List(ctx *gin.Context) {
 		return
 	}
 
-	list, err := messageService.List(ctx, userID, req.Receiver)
+	list, err := messageService.List(ctx, userID, req.FriendID)
 	if err != nil {
 		ctx.JSON(http.StatusOK, handlers.Resp{
 			Code:    -1,
@@ -39,10 +41,19 @@ func List(ctx *gin.Context) {
 		return
 	}
 
+	type resp struct {
+		List  []tmessage.Message `json:"list"`
+		Total int                `json:"total"`
+	}
+	r := resp{
+		List:  list,
+		Total: len(list),
+	}
+
 	ctx.JSON(http.StatusOK, handlers.Resp{
 		Code:    0,
 		Message: "success",
-		Data:    list,
+		Data:    r,
 	})
 }
 
@@ -68,9 +79,18 @@ func ListRoom(ctx *gin.Context) {
 		return
 	}
 
+	type resp struct {
+		List  []tgroupmessage.GroupMessage `json:"list"`
+		Total int                          `json:"total"`
+	}
+	r := resp{
+		List:  list,
+		Total: len(list),
+	}
+
 	ctx.JSON(http.StatusOK, handlers.Resp{
 		Code:    0,
 		Message: "success",
-		Data:    list,
+		Data:    r,
 	})
 }

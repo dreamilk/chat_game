@@ -11,11 +11,15 @@ import (
 )
 
 func Server() {
-	log.Info(context.Background(), "server start")
+	ctx := context.Background()
+
+	log.Info(ctx, "server start")
 
 	r := gin.New()
 	r.Use(log.GinZap())
 
 	api.RegisterRoute(r)
+	go api.ServerRpc(ctx)
+
 	r.Run(config.GetAppConfig().Port)
 }

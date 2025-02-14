@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  chat_game:
+    image: chat_game:latest
+    ports:
+      - 8080:8080
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: server

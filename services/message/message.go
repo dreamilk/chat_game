@@ -15,30 +15,15 @@ import (
 	tgroupmessage "chat_game/models/postgresql/t_group_message"
 	tmessage "chat_game/models/postgresql/t_message"
 	"chat_game/services/room"
+	"chat_game/utils/common"
 	"chat_game/utils/opctx"
 )
 
 type MessageSendFunc func(userID string, message []byte) error
 
-type MessageType string
-
-const (
-	MessageTypeUser   MessageType = "user"
-	MessageTypeRoom   MessageType = "room"
-	MessageTypeSystem MessageType = "system"
-)
-
-type Msg struct {
-	MsgType MessageType `json:"msg_type"`
-	Sender  string      `json:"sender"`
-	RoomID  string      `json:"room_id"`
-	Content string      `json:"content"`
-}
-
 type MessageService interface {
-	List(ctx context.Context, sender string, receiver string) ([]tmessage.Message, error)
+	List(ctx context.Context, userID string, friendID string) ([]tmessage.Message, error)
 	ListRoom(ctx context.Context, roomID string) ([]tgroupmessage.GroupMessage, error)
-	Insert(ctx context.Context, message tmessage.Message) error
 	SendToUser(ctx context.Context, userID string, message []byte, send MessageSendFunc) error
 	SendToRoom(ctx context.Context, roomID string, message []byte, send MessageSendFunc) error
 }
@@ -55,8 +40,8 @@ func NewMessageService() MessageService {
 	return &MessageServiceImpl{db: db, roomService: roomService}
 }
 
-func (m *MessageServiceImpl) List(ctx context.Context, sender string, receiver string) ([]tmessage.Message, error) {
-	return m.db.MessageDB.List(ctx, sender, receiver)
+func (m *MessageServiceImpl) List(ctx context.Context, userID string, friendID string) ([]tmessage.Message, error) {
+	return m.db.MessageDB.List(ctx, userID, friendID)
 }
 
 func (m *MessageServiceImpl) ListRoom(ctx context.Context, roomID string) ([]tgroupmessage.GroupMessage, error) {
@@ -66,10 +51,6 @@ func (m *MessageServiceImpl) ListRoom(ctx context.Context, roomID string) ([]tgr
 	}
 
 	return groupMessages, nil
-}
-
-func (m *MessageServiceImpl) Insert(ctx context.Context, message tmessage.Message) error {
-	return m.db.MessageDB.Insert(ctx, message)
 }
 
 func (m *MessageServiceImpl) SendToUser(ctx context.Context, userID string, message []byte, send MessageSendFunc) error {
@@ -82,10 +63,12 @@ func (m *MessageServiceImpl) SendToUser(ctx context.Context, userID string, mess
 		CreatedAt: time.Now(),
 	}
 
-	msg := Msg{
-		MsgType: MessageTypeUser,
-		Sender:  sender,
-		Content: string(message),
+	msg := common.Msg{
+		MsgType:  common.MsgTypeUser,
+		Sender:   sender,
+		Receiver: userID,
+		RoomID:   "",
+		Content:  string(message),
 	}
 
 	if err := warpSend(ctx, send, userID, msg); err != nil {
@@ -96,8 +79,11 @@ func (m *MessageServiceImpl) SendToUser(ctx context.Context, userID string, mess
 		tMsg.Status = tmessage.StatusRead
 	}
 
-	if err := m.Insert(ctx, tMsg); err != nil {
-		log.Error(ctx, "insert message", zap.Error(err))
+	// only save message to db when sender is self
+	if sender == userID {
+		if err := m.db.MessageDB.Insert(ctx, tMsg); err != nil {
+			log.Error(ctx, "insert message", zap.Error(err))
+		}
 	}
 
 	return nil
@@ -123,11 +109,12 @@ func (m *MessageServiceImpl) SendToRoom(ctx context.Context, roomID string, mess
 		return errors.New("user not in room")
 	}
 
-	msg := Msg{
-		MsgType: MessageTypeRoom,
-		Sender:  sender,
-		RoomID:  roomID,
-		Content: string(message),
+	msg := common.Msg{
+		MsgType:  common.MsgTypeRoom,
+		Sender:   sender,
+		Receiver: "",
+		RoomID:   roomID,
+		Content:  string(message),
 	}
 
 	for _, user := range room.Users {
@@ -148,6 +135,14 @@ func (m *MessageServiceImpl) SendToRoom(ctx context.Context, roomID string, mess
 }
 
 func warpSend(_ context.Context, send MessageSendFunc, userID string, v interface{}) error {
+	if s, ok := v.(string); ok {
+		return send(userID, []byte(s))
+	}
+
+	if b, ok := v.([]byte); ok {
+		return send(userID, b)
+	}
+
 	jsonBytes, err := json.Marshal(v)
 	if err != nil {
 		return err

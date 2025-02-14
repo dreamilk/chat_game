@@ -7,7 +7,13 @@ import (
 )
 
 type AppConfig struct {
-	Port  string `yaml:"port"`
+	Port string `yaml:"port"`
+
+	Rpc struct {
+		Network string `yaml:"network"`
+		Addr    string `yaml:"addr"`
+	} `yaml:"rpc"`
+
 	Redis struct {
 		Addr     string `yaml:"addr"`
 		User     string `yaml:"user"`
@@ -24,7 +30,7 @@ type AppConfig struct {
 }
 
 const (
-	configFile = "./app.yml"
+	defaultConfigFile = "./app.yml"
 
 	defaultPort = ":8080"
 )
@@ -34,7 +40,13 @@ var conf = AppConfig{
 }
 
 func init() {
-	f, err := os.ReadFile(configFile)
+	file := os.Getenv("CONFIG_FILE")
+
+	if file == "" {
+		file = defaultConfigFile
+	}
+
+	f, err := os.ReadFile(file)
 	if err != nil {
 		return
 	}

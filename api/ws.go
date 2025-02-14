@@ -10,6 +10,8 @@ import (
 	"chat_game/handlers/ws"
 )
 
+var hub = ws.NewHub()
+
 var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
@@ -23,7 +25,6 @@ func ServeWs(c *gin.Context) {
 	}
 
 	ctx := context.Background()
-	hub := ws.NewHub()
 
 	userID := c.GetString("user_id")
 	client := ws.NewClient(hub, userID, conn)

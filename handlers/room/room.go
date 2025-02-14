@@ -25,9 +25,18 @@ func List(ctx *gin.Context) {
 		return
 	}
 
+	type resp struct {
+		List  []*room.Room `json:"list"`
+		Total int          `json:"total"`
+	}
+	r := resp{
+		List:  roomList,
+		Total: len(roomList),
+	}
+
 	ctx.JSON(http.StatusOK, handlers.Resp{
 		Code:    0,
-		Data:    roomList,
+		Data:    r,
 		Message: "ok",
 	})
 }
