@@ -12,5 +12,5 @@ type MsgResp struct {
 }
 
 type MsgServer interface {
-	SendMessage(req common.Msg, res *MsgResp) error
+	SendMessage(req common.WsHubMsg, res *MsgResp) error
 }

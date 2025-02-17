@@ -7,8 +7,9 @@ const (
 type MsgType string
 
 const (
-	MsgTypeRoom MsgType = "room"
-	MsgTypeUser MsgType = "user"
+	MsgTypeRoom   MsgType = "room"
+	MsgTypeUser   MsgType = "user"
+	MsgTypeSystem MsgType = "system"
 )
 
 type Msg struct {
@@ -17,4 +18,9 @@ type Msg struct {
 	Receiver string  `json:"receiver"`
 	RoomID   string  `json:"room_id"`
 	Content  string  `json:"content"`
+}
+
+type WsHubMsg struct {
+	Receiver string `json:"receiver"`
+	Msg      Msg    `json:"msg"`
 }

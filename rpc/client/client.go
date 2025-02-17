@@ -20,7 +20,7 @@ func NewMsgServiceClient(network, address string) (*MsgServiceClient, error) {
 	return &MsgServiceClient{Client: conn}, nil
 }
 
-func (m *MsgServiceClient) SendMessage(ctx context.Context, req common.Msg) (*mrpc.MsgResp, error) {
+func (m *MsgServiceClient) SendMessage(ctx context.Context, req common.WsHubMsg) (*mrpc.MsgResp, error) {
 	res := &mrpc.MsgResp{}
 	err := m.Client.Call(mrpc.MsgServiceName+".SendMessage", req, res)
 	if err != nil {

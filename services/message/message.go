@@ -2,7 +2,6 @@ package message
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"slices"
 	"time"
@@ -19,13 +18,13 @@ import (
 	"chat_game/utils/opctx"
 )
 
-type MessageSendFunc func(userID string, message []byte) error
+type MessageSendFunc func(receiver string, msg common.Msg) error
 
 type MessageService interface {
 	List(ctx context.Context, userID string, friendID string) ([]tmessage.Message, error)
 	ListRoom(ctx context.Context, roomID string) ([]tgroupmessage.GroupMessage, error)
-	SendToUser(ctx context.Context, userID string, message []byte, send MessageSendFunc) error
-	SendToRoom(ctx context.Context, roomID string, message []byte, send MessageSendFunc) error
+	SendToUser(ctx context.Context, receiver string, message string, send MessageSendFunc) error
+	SendToRoom(ctx context.Context, roomID string, message string, send MessageSendFunc) error
 }
 
 type MessageServiceImpl struct {
@@ -53,43 +52,40 @@ func (m *MessageServiceImpl) ListRoom(ctx context.Context, roomID string) ([]tgr
 	return groupMessages, nil
 }
 
-func (m *MessageServiceImpl) SendToUser(ctx context.Context, userID string, message []byte, send MessageSendFunc) error {
+func (m *MessageServiceImpl) SendToUser(ctx context.Context, receiver string, message string, send MessageSendFunc) error {
 	sender := opctx.GetUserID(ctx)
 
 	tMsg := tmessage.Message{
 		Sender:    sender,
-		Receiver:  userID,
-		Content:   string(message),
+		Receiver:  receiver,
+		Content:   message,
 		CreatedAt: time.Now(),
 	}
 
 	msg := common.Msg{
 		MsgType:  common.MsgTypeUser,
 		Sender:   sender,
-		Receiver: userID,
+		Receiver: receiver,
 		RoomID:   "",
-		Content:  string(message),
+		Content:  message,
 	}
 
-	if err := warpSend(ctx, send, userID, msg); err != nil {
-		log.Error(ctx, "send message to user", zap.Error(err), zap.String("user_id", userID), zap.String("msg", string(message)))
+	if err := send(receiver, msg); err != nil {
+		log.Error(ctx, "send message to user", zap.Error(err), zap.String("receiver", receiver), zap.String("msg", message))
 
 		tMsg.Status = tmessage.StatusUnread
 	} else {
 		tMsg.Status = tmessage.StatusRead
 	}
 
-	// only save message to db when sender is self
-	if sender == userID {
-		if err := m.db.MessageDB.Insert(ctx, tMsg); err != nil {
-			log.Error(ctx, "insert message", zap.Error(err))
-		}
+	if err := m.db.MessageDB.Insert(ctx, tMsg); err != nil {
+		log.Error(ctx, "insert message", zap.Error(err))
 	}
 
 	return nil
 }
 
-func (m *MessageServiceImpl) SendToRoom(ctx context.Context, roomID string, message []byte, send MessageSendFunc) error {
+func (m *MessageServiceImpl) SendToRoom(ctx context.Context, roomID string, message string, send MessageSendFunc) error {
 	sender := opctx.GetUserID(ctx)
 
 	groupMsg := tgroupmessage.GroupMessage{
@@ -114,16 +110,16 @@ func (m *MessageServiceImpl) SendToRoom(ctx context.Context, roomID string, mess
 		Sender:   sender,
 		Receiver: "",
 		RoomID:   roomID,
-		Content:  string(message),
+		Content:  message,
 	}
 
-	for _, user := range room.Users {
-		if user == sender {
+	for _, receiver := range room.Users {
+		if receiver == sender {
 			continue
 		}
 
-		if err := warpSend(ctx, send, user, msg); err != nil {
-			log.Error(ctx, "send message to room", zap.Error(err), zap.String("room_id", roomID), zap.String("msg", string(message)))
+		if err := send(receiver, msg); err != nil {
+			log.Error(ctx, "send message to room", zap.Error(err), zap.String("room_id", roomID), zap.String("msg", message), zap.String("receiver", receiver))
 		}
 	}
 
@@ -132,21 +128,4 @@ func (m *MessageServiceImpl) SendToRoom(ctx context.Context, roomID string, mess
 	}
 
 	return nil
-}
-
-func warpSend(_ context.Context, send MessageSendFunc, userID string, v interface{}) error {
-	if s, ok := v.(string); ok {
-		return send(userID, []byte(s))
-	}
-
-	if b, ok := v.([]byte); ok {
-		return send(userID, b)
-	}
-
-	jsonBytes, err := json.Marshal(v)
-	if err != nil {
-		return err
-	}
-
-	return send(userID, jsonBytes)
 }

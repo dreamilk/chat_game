@@ -2,7 +2,6 @@ package ws
 
 import (
 	"context"
-	"encoding/json"
 	"sync"
 	"time"
 
@@ -57,48 +56,42 @@ func (h *Hub) Register(ctx context.Context, userID string, client *Client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
+	if c, ok := h.m[userID]; ok {
+		log.Info(ctx, "user already registered", zap.String("user_id", userID))
+		c.Close(ctx)
+	}
+
 	h.m[userID] = client
 
 	log.Info(ctx, "register", zap.String("user_id", userID))
 
-	client.send <- []byte("welcome " + userID)
+	client.send <- common.Msg{
+		MsgType:  common.MsgTypeSystem,
+		Sender:   userID,
+		Receiver: userID,
+		Content:  "welcome " + userID,
+	}
 
 	h.msgHub.Register(ctx, userID, h.rpcAddr)
 }
 
-func (h *Hub) Unregister(userID string) {
+func (h *Hub) Send(receiver string, msg common.Msg) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	delete(h.m, userID)
-
-	h.msgHub.Unregister(context.Background(), userID)
-}
-
-func (h *Hub) Send(userID string, msg []byte) error {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
-	c, ok := h.m[userID]
+	c, ok := h.m[receiver]
 	if ok {
 		c.send <- msg
 		return nil
 	}
 
-	msgReq := common.Msg{}
-
-	err := json.Unmarshal(msg, &msgReq)
-	if err != nil {
-		return err
-	}
-
 	ctx := context.Background()
 
-	log.Info(ctx, "send message", zap.String("msg", string(msg)))
+	log.Info(ctx, "send message", zap.Any("msg", msg))
 
-	rpcAddr, err := h.msgHub.Find(ctx, msgReq.Receiver)
+	rpcAddr, err := h.msgHub.Find(ctx, receiver)
 	if err != nil {
-		log.Error(ctx, "find msg rpc addr", zap.Error(err), zap.String("user_id", msgReq.Receiver))
+		log.Error(ctx, "find msg rpc addr", zap.Error(err), zap.String("receiver", receiver))
 		return err
 	}
 
@@ -107,7 +100,10 @@ func (h *Hub) Send(userID string, msg []byte) error {
 		return err
 	}
 
-	_, err = msgRpcService.SendMessage(context.Background(), msgReq)
+	_, err = msgRpcService.SendMessage(context.Background(), common.WsHubMsg{
+		Receiver: receiver,
+		Msg:      msg,
+	})
 	if err != nil {
 		return err
 	}
@@ -153,15 +149,8 @@ func (h *Hub) Run(ctx context.Context) {
 var _ rpc.MsgServer = (*Hub)(nil)
 
 // SendMessage implements rpc.MsgServer.
-func (h *Hub) SendMessage(req common.Msg, res *rpc.MsgResp) error {
-	ctx := context.Background()
-
-	msg, err := json.Marshal(req)
-	if err != nil {
-		return err
-	}
-
-	return h.HandleWs(ctx, req.Sender, msg)
+func (h *Hub) SendMessage(req common.WsHubMsg, res *rpc.MsgResp) error {
+	return h.Send(req.Receiver, req.Msg)
 }
 
 func (h *Hub) SetRpcAddr(addr string) {

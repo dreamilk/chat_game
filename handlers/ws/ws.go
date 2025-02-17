@@ -23,12 +23,12 @@ func (h *Hub) HandleWs(ctx context.Context, userID string, msg []byte) error {
 
 	switch message.MsgType {
 	case common.MsgTypeRoom:
-		if err := h.messageService.SendToRoom(ctx, message.RoomID, []byte(message.Content), h.Send); err != nil {
+		if err := h.messageService.SendToRoom(ctx, message.RoomID, message.Content, h.Send); err != nil {
 			log.Error(ctx, "send message to room", zap.Error(err), zap.String("room_id", message.RoomID), zap.String("msg", message.Content))
 		}
 
 	case common.MsgTypeUser:
-		if err := h.messageService.SendToUser(ctx, message.Receiver, []byte(message.Content), h.Send); err != nil {
+		if err := h.messageService.SendToUser(ctx, message.Receiver, message.Content, h.Send); err != nil {
 			log.Error(ctx, "send message to user", zap.Error(err), zap.String("user_id", message.Receiver), zap.String("msg", message.Content))
 		}
 
