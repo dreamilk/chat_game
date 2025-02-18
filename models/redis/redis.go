@@ -25,6 +25,9 @@ type Client interface {
 	SMembers(ctx context.Context, key string) ([]string, error)
 	SRem(ctx context.Context, key string, value string) error
 	SIsMember(ctx context.Context, key string, value string) (bool, error)
+
+	Publish(ctx context.Context, channel string, message string) error
+	Subscribe(ctx context.Context, channel string) *redis.PubSub
 }
 
 var _ Client = &RedisClient{}
@@ -85,4 +88,12 @@ func (r *RedisClient) SRem(ctx context.Context, key string, value string) error 
 
 func (r *RedisClient) SIsMember(ctx context.Context, key string, value string) (bool, error) {
 	return r.c.SIsMember(ctx, key, value).Result()
+}
+
+func (r *RedisClient) Publish(ctx context.Context, channel string, message string) error {
+	return r.c.Publish(ctx, channel, message).Err()
+}
+
+func (r *RedisClient) Subscribe(ctx context.Context, channel string) *redis.PubSub {
+	return r.c.Subscribe(ctx, channel)
 }

@@ -53,11 +53,14 @@ func NewHub() *Hub {
 }
 
 func (h *Hub) Register(ctx context.Context, userID string, client *Client) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
+	rpcAddr, err := h.msgHub.Find(ctx, userID)
+	if err == nil && rpcAddr != "" {
+		log.Info(ctx, "already registered user", zap.String("user_id", userID), zap.String("rpc_addr", rpcAddr))
+
+		h.msgHub.Unregister(ctx, userID, rpcAddr)
+	}
 
 	if c, ok := h.m[userID]; ok {
-		log.Info(ctx, "user already registered", zap.String("user_id", userID))
 		c.Close(ctx)
 	}
 
@@ -112,6 +115,30 @@ func (h *Hub) Send(receiver string, msg common.Msg) error {
 }
 
 func (h *Hub) Run(ctx context.Context) {
+	go h.msgHub.Run(ctx, func(ctx context.Context, action *wshub.UserActionMsg) {
+		if action.Src == h.rpcAddr {
+			return
+		}
+
+		log.Info(ctx, "process user action", zap.Any("action", action))
+
+		if action.Action == wshub.UserActionLogout {
+			h.mu.Lock()
+			defer h.mu.Unlock()
+
+			if c, ok := h.m[action.UserID]; ok {
+				c.Close(ctx)
+			}
+		} else if action.Action == wshub.UserActionLogin {
+			h.mu.Lock()
+			defer h.mu.Unlock()
+
+			if c, ok := h.m[action.UserID]; ok {
+				c.Close(ctx)
+			}
+		}
+	})
+
 	for {
 		msg := <-h.receive
 		log.Info(ctx, "handle", zap.String("user_id", msg.userID), zap.String("msg", string(msg.msg)), zap.Int("message_type", msg.messageType))
@@ -143,6 +170,16 @@ func (h *Hub) Run(ctx context.Context) {
 				}
 			}()
 		}
+	}
+}
+
+func (h *Hub) Close(ctx context.Context) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	for _, c := range h.m {
+		h.msgHub.Unregister(ctx, c.userID, h.rpcAddr)
+		c.Close(ctx)
 	}
 }
 

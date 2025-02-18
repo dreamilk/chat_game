@@ -3,11 +3,14 @@ package api
 import (
 	"context"
 	"net/http"
+	"os"
+	"os/signal"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
 	"chat_game/handlers/ws"
+	"chat_game/log"
 )
 
 var hub = ws.NewHub()
@@ -16,6 +19,21 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool {
 		return true
 	},
+}
+
+func init() {
+	ctx := context.Background()
+	// 监听ctr c注销服务
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		<-c
+
+		hub.Close(ctx)
+
+		log.Info(ctx, "server stop")
+		os.Exit(0)
+	}()
 }
 
 func ServeWs(c *gin.Context) {

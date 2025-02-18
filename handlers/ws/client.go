@@ -52,7 +52,6 @@ func (c *Client) Close(ctx context.Context) {
 	c.closeOnce.Do(func() {
 		close(c.stop)
 		delete(c.hub.m, c.userID)
-		c.hub.msgHub.Unregister(ctx, c.userID)
 		c.conn.Close()
 		close(c.send)
 	})

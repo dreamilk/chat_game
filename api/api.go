@@ -7,6 +7,7 @@ import (
 	"chat_game/handlers"
 	"chat_game/handlers/message"
 	"chat_game/handlers/room"
+	"chat_game/handlers/user"
 )
 
 func RegisterRoute(eg *gin.Engine) {
@@ -25,4 +26,7 @@ func RegisterRoute(eg *gin.Engine) {
 	messageGroup := eg.Group("/message")
 	messageGroup.GET("/list", auth.Auth(), message.List)
 	messageGroup.GET("/room_list", auth.Auth(), message.ListRoom)
+
+	userGroup := eg.Group("/user")
+	userGroup.GET("/list", auth.Auth(), user.List)
 }
