@@ -4,6 +4,9 @@ import (
 	"context"
 
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
+
+	"chat_game/log"
 )
 
 type RedisClient struct {
@@ -32,13 +35,48 @@ type Client interface {
 
 var _ Client = &RedisClient{}
 
+type redisHook struct{}
+
+// DialHook implements redis.Hook.
+func (r *redisHook) DialHook(next redis.DialHook) redis.DialHook {
+	return next
+}
+
+// ProcessHook implements redis.Hook.
+func (r *redisHook) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
+	return func(ctx context.Context, cmd redis.Cmder) error {
+		log.Info(ctx, "redis cmd", zap.String("cmd", cmd.String()))
+
+		err := next(ctx, cmd)
+		if err != nil {
+			log.Error(ctx, "redis cmd error", zap.Error(err))
+		}
+
+		// 打印返回结果
+		log.Info(ctx, "redis cmd result", zap.String("result", cmd.String()))
+
+		return err
+	}
+}
+
+// ProcessPipelineHook implements redis.Hook.
+func (r *redisHook) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.ProcessPipelineHook {
+	return next
+}
+
+var _ redis.Hook = &redisHook{}
+
 func NewRedis(addr string, user string, password string) *RedisClient {
+	c := redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Username: user,
+		Password: password,
+	})
+
+	c.AddHook(&redisHook{})
+
 	return &RedisClient{
-		c: redis.NewClient(&redis.Options{
-			Addr:     addr,
-			Username: user,
-			Password: password,
-		}),
+		c: c,
 	}
 }
 

@@ -69,6 +69,8 @@ func (c *Client) read(ctx context.Context) {
 	})
 
 	c.conn.SetCloseHandler(func(code int, text string) error {
+		c.Close(ctx)
+
 		log.Info(ctx, "connection closed",
 			zap.String("user_id", c.userID),
 			zap.Int("code", code),
